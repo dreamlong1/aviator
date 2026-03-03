@@ -1,64 +1,208 @@
-# Aviator - 3D 飞行小游戏
+<div align="center">
 
-## 项目简介
+# ✈️ Aviator
 
-Aviator 是一个通过鼠标控制飞机、在三维场景中躲避障碍并收集能量的实时 WebGL 游戏。
+**一个基于 Three.js 的 Low-Poly 风格 3D 飞行小游戏**
+
+[![Three.js](https://img.shields.io/badge/Three.js-r183-049EF4?logo=three.js&logoColor=white)](https://threejs.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.3-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
+[![GitHub Pages](https://img.shields.io/badge/Demo-在线体验-ff6b6b)](https://dreamlong1.github.io/aviator/)
+
+</div>
+
+<p align="center">
+  <img src="docs/image.png" alt="Aviator 游戏预览" width="100%"/>
+</p>
 
 ---
 
-## 在线运行
+## 📖 项目简介
 
-你可以点击链接在线体验游戏。
-<https://dreamlong1.github.io/aviator/>
+Aviator 是一款纯前端实现的 WebGL 3D 飞行街机游戏。玩家通过鼠标操控一架 Low-Poly 风格的红色双翼战斗机，在无尽的天空与海洋之间穿梭飞行，**收集蓝色能量药丸**以恢复生命，**躲避红色障碍物**以求生存。
+
+游戏完全运行在浏览器中，无需安装任何客户端，零后端依赖。
+
+> 🎮 **[👉 点击这里在线体验游戏](https://dreamlong1.github.io/aviator/)**
 
 ---
 
-## 本地部署与运行
+## 🎬 核心玩法
 
-本项目基于现代前端构建工具 Vite 提供极速的工程化构建与本地开发体验。
+| 机制 | 说明 |
+|:----|:----|
+| 🖱️ **鼠标操控** | 移动鼠标即可控制飞机的飞行方向，飞机会以平滑阻尼追随光标，并自动产生真实的翻滚 (Roll) 与俯仰 (Pitch) 姿态 |
+| 💊 **能量收集** | 飞行前方的海面上空会按波浪路径刷新蓝色能量药丸，精准飞行并拾取它们可恢复 3 点能量 |
+| 💥 **障碍闪避** | 随机出现的红色多面体障碍物带有攻击性，每次碰撞将扣除 50 点能量并触发粒子爆破特效 |
+| ❤️ **Two-Hit 机制** | 初始 100 点能量，两次碰撞即 Game Over。硬核容错率考验你的反应力 |
+| 📈 **动态升级** | 飞行距离每突破 1000 即自动升级，游戏速度全面递增，大海、云朵、障碍物冲刺频率随等级提升 |
+| 🔄 **即时重开** | Game Over 后点击屏幕任意位置即可满血重生，继续挑战 |
 
-**环境要求**: Node.js
+---
 
-```bash
-# 在项目根目录下执行：
-npm install   # 安装项目依赖
-npm run dev   # 启动本地开发服务器
+## 🏗️ 技术架构
+
+### 技术栈
+
+```
+Three.js (r183)  ──  3D 渲染引擎
+Vite (7.3)       ──  工程化构建工具
+ES6+ Modules     ──  模块化代码组织
+gh-pages          ──  GitHub Pages 自动化部署
 ```
 
-启动之后，在浏览器中访问控制台输出的本地服务地址（默认通常为 `http://localhost:5173/`）即可直接体验游戏。
+### 系统架构图
+
+```mermaid
+graph TB
+    subgraph 交互层
+        A[鼠标事件监听] --> B[坐标标准化映射]
+    end
+    
+    subgraph 逻辑层
+        B --> C[飞机位置阻尼插值]
+        D[game 状态对象] --> E[距离/等级/能量计算]
+        E --> F[碰撞检测]
+        F --> G[粒子反馈系统]
+    end
+    
+    subgraph 渲染层
+        H[Sea 海洋波浪] 
+        I[Sky 云朵系统]
+        J[AirPlane 飞机 + Pilot 飞行员]
+        K[Enemy/Coin 障碍物与道具]
+        L[Particle 粒子爆破]
+    end
+    
+    subgraph 调度层
+        M["loop() 主帧循环 (requestAnimationFrame)"]
+        M --> C
+        M --> E
+        M --> H
+        M --> I
+        M --> J
+        M --> K
+        M --> L
+        M --> N[renderer.render]
+    end
+```
+
+### 核心类一览
+
+| 类名 | 职责 | 关键实现 |
+|:-----|:-----|:---------|
+| `Sea` | 海洋表面 | 横置圆柱体 + 逐顶点三角函数波浪动画，直接操作 `Float32Array` |
+| `Cloud` / `Sky` | 天空与云层 | 多个随机缩放方块组成云朵，20 朵云环形分布并整体旋转 |
+| `AirPlane` | 主角飞机 | 机舱、引擎、尾翼、机翼、螺旋桨 5 大部件几何组合，含顶点法线重算 |
+| `Pilot` | 飞行员小人 | 身体、头部、护目镜、耳朵、动态飘逸头发，余弦函数驱动发簇摆动 |
+| `Ennemy` / `EnnemiesHolder` | 敌方障碍物 | 红色四面体，容器类负责批量生成、极角旋转与碰撞回收 |
+| `Coin` / `CoinsHolder` | 能量药丸 | 蓝色四面体道具，按距离阈值批量生成，碰撞时触发加血与粒子 |
+| `Particle` / `ParticlesHolder` | 碰撞粒子 | 爆破碎片四散飘落，随机目标点插值 + 缩放衰减的完整生命周期管理 |
 
 ---
 
-## 核心玩法机制
+## 📁 项目结构
 
-1. **丝滑追随驱动**：玩家通过移动鼠标光标来操控“红男爵”号战斗机。飞机底层采用“弹性平滑逼近”的线性插值算法尾随光标，并且在水平和向下飞行时，会实时映射并动态表现自然界真实的“翻滚 (Roll)”与“俯仰 (Pitch)”机身倾角，反馈十分连贯。
-2. **高压生存系统 (Two-Hit 去死机制)**：
-   - 飞机初始防御能量为 100 点（直观展示于 UI 顶端的极简能量条）。
-   - 飞行图景中会随机产生带有攻击性的“红色多面障碍球”。与其发生碰撞瞬间会触发粒子爆破伤害，一次性扣除 50 点能量。玩家只需连续失误两次（`100 -> 50 -> 0`）即判定坠毁 (Game Over)。这赋予了游戏硬核的容错率。
-3. **动态资源获取**：前方海平面会按三角函数波浪路径批量刷新“蓝色能量药丸”。进行高风险擦边飞行并精准收集药丸可微量恢复能量护盾，增加了即时行驶路线的策略深度。
-4. **自循环动态演进 (Game Loop & Level Up)**：没有生硬的过关动画。随着面板上记录的飞行距离 (Distance) 不断突破阈值，关卡层级 (Level) 会自动进化。整个世界的主引擎转速（大海、云朵及障碍物的冲刺频率）亦将按比例系数全面递增，大幅加快游戏节奏。
-
----
-
-## 技术亮点与底层实现
-
-本项目完全遵循现代现代前端工程化标准 **(ES6+ & Vite)** 进行架构与设计，没有直接堆砌第三方资产加载器，而是深度注重纯粹的 WebGL 图形底层代码控制与 JavaScript 性能优化：
-
-- **GPU 级别 BufferGeometry 内存操作**：
-   游戏内的部分精密视觉变化（例如：大海表面随着时间动态计算翻涌的波涛、机舱前端的锐化捏造）完全抛弃了影响效率的上层黑盒操作。底层通过直接修改 `THREE.BufferGeometry` 中的 `Float32Array`（点坐标属性内存缓冲）并在必要时手写指令实时重算法线（Vertex Normals），极致榨干了 GPU 算力，保证在海量定点动画时的稳定 60 FPS 刷新体验。
-- **面向对象的池化调度逻辑 (Object Management)**：
-   摒弃了原始且极易造成内存泄漏的全局结构。采用了严复的 ES6 Class 对障碍物库(Enemy)、收集品集合(Coin)以及高并发的碎片粒子爆炸系统(Particle) 进行业务梳理。保证所有在屏实体被主渲染循环安全地统一捕获、计算矩阵运算、并在越过视锥体边界后主动抹除销毁。
-- **纯数学特征的无引擎极轻量级碰撞检测**：
-   完全规避了引入物理引擎库的冗余包袱。在 `requestAnimationFrame` 推进的每一幕计算中，直接使用三维球面点位向量距离差 (`Vector3.length()`) 和安全容差比例实时算计交汇判定。实现了低时间复杂度、零延迟且高精准的视觉层穿透反馈。
-- **自适应时间轴同步机制 (`deltaTime`)**：
-   没有把场景速率死板地硬编码在循环次数中。游戏大局的一切移动、加速及生成节奏严格锚定在每一帧间距的真实时间差 (`deltaTime`) 上下文之中。这强力保障了该应用无论是在低配置办公本还是 144Hz 电竞显示屏上，都能展现完全绝对一致的物理位移步调和时间切面公平性。
-- **现代化 Three.js 渲染管线适配与原味还原**：
-   针对新型 Three.js (r152+) 全面启用的 PBR 和基于物理的照明（Physically Correct Lights）以及 SRGB 色彩空间管理，本项目专门做出了深度定向适配。通过针对性地调整色彩输出配置 (`SRGBColorSpace`)、对受影响光照强度补充 `Math.PI` 赔偿系数，并重新为 Mesh（如云朵、机长面部与头发模块）注入不可或缺的 `flatShading` 属性，完美在现代渲染架构下无损复盘了初版极度生动、明亮的 Low-Poly 硬朗低多边形美术风格，彻底修复了由色域转换带来的整体画面黯淡发灰问题。
+```
+Aviator/
+├── index.html          # 入口页面 — 含 CSS+DOM 构建的复古风 HUD 面板
+├── main.js             # 核心引擎 — 场景/灯光/模型/碰撞/主循环 (915行)
+├── style.css           # 全局样式 — UI 层级/字体/动画/能量条
+├── vite.config.js      # Vite 配置 — GitHub Pages 部署路径
+├── package.json        # 项目依赖 — three, vite, gh-pages
+├── public/             # 静态资源
+│   └── vite.svg
+└── dist/               # 构建产物（自动生成）
+```
 
 ---
 
-## 目录结构
+## 🚀 快速开始
 
-- **`index.html`**: Vite 的入口挂接载体。内部纯利用 CSS 与原生 DOM 布局出了一套覆盖在 `Canvas` 上层的高级复古风 HUD (Heads-up Display) 数据控制面板台组件。
-- **`style.css`**: 全局属性重置、UI 防遮挡交互穿透配置及排版视觉设计。
-- **`main.js`**: **3D 引擎与生命周期的大脑核心**。涵盖：图形环境准备、灯光搭建校色、Mesh 几何实体的底层函数构建及注册体系、以及最尾端用来驱动天下万象滚滚向前的连续主帧事件分发循环逻辑。
+### 环境要求
+
+- [Node.js](https://nodejs.org/) (v18+)
+
+### 安装与运行
+
+```bash
+# 克隆项目
+git clone https://github.com/dreamlong1/aviator.git
+cd aviator
+
+# 安装依赖
+npm install
+
+# 启动本地开发服务器
+npm run dev
+```
+
+启动后访问控制台输出的地址（默认 `http://localhost:5173/`）即可体验游戏。
+
+### 构建与部署
+
+```bash
+# 生产环境打包
+npm run build
+
+# 部署到 GitHub Pages
+npm run deploy
+```
+
+---
+
+## 🎮 游戏控制
+
+| 操作 | 说明 |
+|:-----|:-----|
+| 移动鼠标 | 控制飞机飞行方向和高度 |
+| 鼠标向上 | 飞机爬升 |
+| 鼠标向下 | 飞机俯冲 |
+| 鼠标左右 | 飞机侧移 |
+| 点击屏幕 | Game Over 后重新开始 |
+
+---
+
+## 🔧 游戏参数速查
+
+| 参数 | 默认值 | 说明 |
+|:-----|:-------|:-----|
+| `initSpeed` | 0.000525 | 初始基础速度 |
+| `energy` | 100 | 初始生命值 |
+| `enemyValue` | 50 | 碰撞障碍物扣血量 |
+| `coinValue` | 3 | 拾取药丸回血量 |
+| `distanceForLevelUpdate` | 1000 | 升级所需飞行距离 |
+| `distanceForEnnemiesSpawn` | 50 | 障碍物生成间距 |
+| `distanceForCoinsSpawn` | 100 | 药丸生成间距 |
+
+> 所有参数均集中在 `main.js` 的 `resetGame()` 函数中，方便统一调参。
+
+---
+
+## ✨ 技术亮点
+
+### 1. GPU 级 BufferGeometry 顶点操作
+
+海面波浪动画直接修改 `THREE.BufferGeometry` 中的 `Float32Array` 点坐标缓冲，并手动重算 Vertex Normals，绕过上层封装，最大化 GPU 利用率。
+
+### 2. 纯数学轻量碰撞检测
+
+完全放弃物理引擎，在每帧 `requestAnimationFrame` 中使用 `Vector3.length()` 计算三维球面向量距离差，配合安全容差完成零延迟碰撞判定。
+
+### 3. deltaTime 自适应时间轴同步
+
+一切运动、加速、生成节奏严格锚定在帧间距真实时间差 `deltaTime` 上，保证在 60Hz 办公屏到 144Hz 电竞屏上物理位移步调完全一致。
+
+### 4. 现代 Three.js 渲染管线适配
+
+针对 Three.js r152+ 的 PBR 照明与 SRGB 色彩空间管理，通过 `SRGBColorSpace` 配置、`Math.PI` 光照强度补偿系数、以及 `flatShading` 属性注入，完美还原经典 Low-Poly 硬朗美术风格。
+
+### 5. 面向对象的实体池化管理
+
+使用 ES6 Class 对 Enemy、Coin、Particle 进行容器化管理，统一生命周期控制——生成、矩阵运算、视锥体越界回收，避免内存泄漏。
+
+---
+
+## 📄 许可证
+
+本项目仅供学习和个人使用。
